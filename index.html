@@ -1,1 +1,6 @@
-It's me, Verity!
+OpenWRT: system hostname to R1.au.team
+Create ifaces and their devices:
+WAN DHCP client assign wan
+
+LAN static eth1 commute ipv4 addr 192.168.101.254 mask 24 assign lan set up dhcp
+dhcp options 6,192.168.101.254 \n 15,au.team \\ start 10 limit 141 \\ del lan (br-lan)
