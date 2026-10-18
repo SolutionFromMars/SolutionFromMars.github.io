@@ -1,6 +1,19 @@
 OpenWRT: system hostname to R1.au.team
 Create ifaces and their devices:
+add new device bridge name CAM ports eth2, eth3
+
 WAN DHCP client assign wan
 
-LAN static eth1 commute ipv4 addr 192.168.101.254 mask 24 assign lan set up dhcp
+LAN static eth1 ipv4 addr 192.168.101.254 mask 24 assign lan set up dhcp
 dhcp options 6,192.168.101.254 \n 15,au.team \\ start 10 limit 141 \\ del lan (br-lan)
+
+CAMS static CAM ipv4 addr 192.168.120.1 mask 24
+
+save & apply, reconnect network, new addres connection
+
+nework-firewall zones fastcheck
+
+open console admin-pc, su -, hostnamectl set-hostname ADMIN-PC.au.team, exec bash
+open srv, hostnamectl set-hostname SRV.au.team, exec bash, ip a, cd /etc/net/ifaces,
+vim /%ens%/options => bootproto=static, echo "192.168.101.10/24" > %ens%/ipv4address, 
+
