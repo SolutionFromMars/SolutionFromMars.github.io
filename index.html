@@ -11,9 +11,17 @@ CAMS static CAM ipv4 addr 192.168.120.1 mask 24
 
 save & apply, reconnect network, new addres connection
 
-nework-firewall zones fastcheck
+network-firewall zones fastcheck
 
 open console admin-pc, su -, hostnamectl set-hostname ADMIN-PC.au.team, exec bash
-open srv, hostnamectl set-hostname SRV.au.team, exec bash, ip a, cd /etc/net/ifaces,
-vim /%ens%/options => bootproto=static, echo "192.168.101.10/24" > %ens%/ipv4address, 
-
+open srv, hostnamectl set-hostname SRV.au.team, exec bash, ip -br a, cd /etc/net/ifaces,
+vim /%ens%/options => bootproto=static, type=eth, config_wireless=no, systemd_bootproto=dhcp4, config_ipv4=yes, disabled=no, nm_controlled=no, systemd_controlled=no
+echo "192.168.101.10/24" > %ens%/ipv4address, echo "default via 192.168.101.254" > %ens%/ipv4route, systemctl restart network, ip -br a
+vim /etc/resolv.conf => nameserver 192.168.101.254
+for domains check ping
+Dns in resolv better change after using
+for future SRV: apt-get update, apt-get cups docker-engine wget -y
+Admin-pc now: apt-get update, apt-get wget -y
+Opens our print service (localhost: 631) => administration => additional parameters => internet print: NO, task max = 300, SAVE
+useradd print, passwd print / P@ssw0rd by paper
+Add printer Katyusha
