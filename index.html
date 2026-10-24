@@ -20,8 +20,10 @@ echo "192.168.101.10/24" > %ens%/ipv4address, echo "default via 192.168.101.254"
 vim /etc/resolv.conf => nameserver 192.168.101.254
 for domains check ping
 Dns in resolv better change after using
-for future SRV: apt-get update, apt-get cups docker-engine wget -y
-Admin-pc now: apt-get update, apt-get wget -y
-Opens our print service (localhost: 631) => administration => additional parameters => internet print: NO, task max = 300, SAVE
+for future SRV: apt-get update, apt-get install cups docker-engine docker-compose-v2 git wget -y
+Admin-pc now: apt-get update, apt-get install wget, zabbix-agent -y
+Open our print service (localhost: 631) => administration => additional parameters => internet print: NO, task max = 300, SAVE
 useradd print, passwd print / P@ssw0rd by paper
-Add printer Katyusha
+Add printer Katyusha, continue, add their support file from site, ...
+SRV now: systemctl start docker, git clone https://github.com/zabbix/zabbix-docker, cd zabbix-docker, docker compose up -d
+admin-pc now: vim /etc/zabbix/zabbix_agentd.conf, Server=0.0.0.0/0, decomment ListenPort, systemctl start zabbix_agentd.service, systemctl status zabbix_agentd.service
