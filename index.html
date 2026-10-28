@@ -1,18 +1,13 @@
 OpenWRT: system hostname to R1.au.team
 Create ifaces and their devices:
 add new device bridge name CAM ports eth2, eth3
-
 WAN DHCP client assign wan
-
 LAN static eth1 ipv4 addr 192.168.101.254 mask 24 assign lan set up dhcp
 dhcp options 6,192.168.101.254 \n 15,au.team \\ start 10 limit 141 \\ del lan (br-lan)
-
 CAMS static CAM ipv4 addr 192.168.120.1 mask 24
-
-save & apply, reconnect network, new addres connection
-
+Network firewall wan masquerading
+save & apply, reconnect network, new address connection
 network-firewall zones fastcheck
-
 open console admin-pc, su -, hostnamectl set-hostname ADMIN-PC.au.team, exec bash
 open srv, hostnamectl set-hostname SRV.au.team, exec bash, ip -br a, cd /etc/net/ifaces,
 vim /%ens%/options => bootproto=static, type=eth, config_wireless=no, systemd_bootproto=dhcp4, config_ipv4=yes, disabled=no, nm_controlled=no, systemd_controlled=no
@@ -20,10 +15,16 @@ echo "192.168.101.10/24" > %ens%/ipv4address, echo "default via 192.168.101.254"
 vim /etc/resolv.conf => nameserver 192.168.101.254
 for domains check ping
 Dns in resolv better change after using
-for future SRV: apt-get update, apt-get install cups docker-engine docker-compose-v2 git wget -y
-Admin-pc now: apt-get update, apt-get install wget, zabbix-agent -y
+for future SRV: apt-get update, apt-get install cups docker-engine docker-compose-v2 git wget zabbix-agent -y
+Admin-pc now: apt-get update, apt-get install wget zabbix-agent -y
 Open our print service (localhost: 631) => administration => additional parameters => internet print: NO, task max = 300, SAVE
 useradd print, passwd print / P@ssw0rd by paper
 Add printer Katyusha, continue, add their support file from site, ...
 SRV now: systemctl start docker, git clone https://github.com/zabbix/zabbix-docker, cd zabbix-docker, docker compose up -d
 admin-pc now: vim /etc/zabbix/zabbix_agentd.conf, Server=0.0.0.0/0, decomment ListenPort, systemctl start zabbix_agentd.service, systemctl status zabbix_agentd.service
+srv now: vim /etc/zabbix/zabbix_agentd.conf, Server=0.0.0.0/0, decomment ListenPort, vim .env => ZABBIX_WEB_NGINX_HTTP_PORT=8080, cd ~
+admin-pc now: open 192.168.101.10:8080, Admin/zabbix, Monitoring => Hosts => New host => Host name SRV, Templates Linux by Zabbix agent, Host groups Linux servers, add interface => Agent 192.168.101.10, Add;
+Host name ADMIN-PC, Templates Linux by Zabbix agent, Host groups Linux servers, add interface => Agent 192.168.101.%ip% (DHCP, use ip -br a), Add;
+srv now: docker run -p 80:80 -e TZ='Asia/Moscow' -d dlandon/zoneminder, docker ps, (if problems)docker compose down, docker compose up -d, docker ps(/if), wget https://download.cyberprotect.ru/releases/CyberBackup/18.1.39034/CyberBackup_18_64-bit.x86_64, chmod +x ./CyberBackup_18_64-bit.x86_64, run it, (2) agent for and (3) bootable media * to _ => next => next => next => next => exit, useradd audit, passwd audit (P@ssw0rd)
+admin-ps now: wget https://download.cyberprotect.ru/releases/CyberBackup/18.1.39034/CyberBackup_18_64-bit.x86_64, chmod +x ./CyberBackup_18_64-bit.x86_64, run it
+admin-pc open 192.168.101.10:9877, root/toor, try license, add account audit, 1:05:0
