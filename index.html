@@ -1,4 +1,5 @@
-OpenWRT: system hostname to R1.au.team
+R1: install last stable Openwrt image from official site via Luci, wait for reboot
+OpenWRT: system hostname to r1.au.team
 Create ifaces and their devices:
 add new device bridge name CAM ports eth2, eth3
 WAN DHCP client assign wan
@@ -8,26 +9,44 @@ CAMS static CAM ipv4 addr 192.168.120.1 mask 24
 Network firewall wan masquerading
 save & apply, reconnect network, new address connection
 network-firewall zones fastcheck, updates
-open console admin-pc, su -, hostnamectl set-hostname ADMIN-PC.au.team, exec bash
-open srv, hostnamectl set-hostname SRV.au.team, exec bash, ip -br a, cd /etc/net/ifaces,
+--- luci fill gap: Network > Interfaces > Devices > Add device configuration > Bridge device br-cam > ports eth2, eth3 > Save; Interfaces > Add new interface CAM > static 192.168.120.1/24 > DHCP Server tab > ignore interface (disable) > Firewall zone CAMS > Save & Apply; Interfaces > lan > Edit > DHCP Server > General setup > start 10, limit 141, DHCP options 6,192.168.101.254 and 15,au.team > Save & Apply; Network > Firewall > Zones > wan > Edit > Masquerading enable > Save & Apply
+
+configure cam1, cam2, print via their web ui: set hostname cam1.au.team, cam2.au.team, print.au.team, set static ip 192.168.120.25/24, 192.168.120.26/24, 192.168.101.100/24, gw 192.168.120.1 / 192.168.101.254
+
+open console admin-pc, su -, hostnamectl set-hostname admin.au.team, exec bash, nmcli connection modify %ens% ipv4.method auto, nmcli connection up %ens%, ip -br a
+open srv, hostnamectl set-hostname srv.au.team, exec bash, ip -br a, cd /etc/net/ifaces,
 vim /%ens%/options => bootproto=static, type=eth, config_wireless=no, systemd_bootproto=dhcp4, config_ipv4=yes, disabled=no, nm_controlled=no, systemd_controlled=no
 echo "192.168.101.10/24" > %ens%/ipv4address, echo "default via 192.168.101.254" > %ens%/ipv4route, systemctl restart network, ip -br a
 vim /etc/resolv.conf => nameserver 192.168.101.254
-for domains check ping
+for domains check ping: ping -c 2 cam1.au.team, ping -c 2 cam2.au.team, ping -c 2 print.au.team, ping -c 2 admin.au.team
 Dns in resolv better change after using
-for future SRV: cd ~, uname -r, remember %version% like a 6.12, apt-get update, apt-get dist-upgrade -y, update-kernel -y, apt-get install cups docker-engine docker-compose-v2 git wget zabbix-agent gcc kernel-headers-modules-%version%-def make kmod-sign kernel-source-%version%  -y
-Admin-pc now: uname -r, remember %version% like a 6.12, apt-get update, apt-get dist-upgrade -y, update-kernel -y, apt-get install wget zabbix-agent gcc make kernel-headers-modules-%version%-def kernel-source-%version% kmod-sign -y, (!) reboot, wait
-Open our print service (localhost: 631) => administration => additional parameters => internet print: NO, task max = 300, SAVE
+
+for future SRV: cd ~, uname -r, remember %version% like a 6.12, apt-get update, apt-get dist-upgrade -y, update-kernel -y, apt-get install cups docker-engine docker-compose-v2 git wget zabbix-agent gcc kernel-headers-modules-%version%-def make kmod-sign kernel-source-%version% -y
+Admin-pc now: uname -r, remember %version% like a 6.12, apt-get update, apt-get dist-upgrade -y, update-kernel -y, apt-get install wget zabbix-agent gcc make kernel-headers-modules-%version%-def kernel-source-%version% kmod-sign cups -y, (!) reboot, wait
+
+Open our print service on SRV (localhost: 631) => administration => additional parameters => internet print: NO, task max = 300, SAVE
 useradd print, passwd print / P@ssw0rd by paper
-Add printer Katyusha, continue, add their support file from site, ...maybe
+srv now: lpadmin -p print -E -v socket://192.168.101.100:9100 -m everywhere
+Add printer print, continue, add their support file from site, ...maybe
+admin-pc now: open localhost:631 => add printer => network printer => ipp://192.168.101.10:631/printers/print, continue, select driver, add
+
 SRV now: systemctl start docker, git clone https://github.com/zabbix/zabbix-docker, cd zabbix-docker, docker compose up -d
 admin-pc now: vim /etc/zabbix/zabbix_agentd.conf, Server=0.0.0.0/0, decomment ListenPort, systemctl start zabbix_agentd.service, systemctl status zabbix_agentd.service
 srv now: vim /etc/zabbix/zabbix_agentd.conf, Server=0.0.0.0/0, decomment ListenPort, vim .env => ZABBIX_WEB_NGINX_HTTP_PORT=8080
+
+srv now: ping -c 4 admin.au.team, (if fail, echo "192.168.101.%ip%" >> /etc/hosts, where %ip% is actual admin-pc ip from ip -br a)
 admin-pc now: open 192.168.101.10:8080, Admin/zabbix, Monitoring => Hosts => New host => Host name SRV, Templates Linux by Zabbix agent, Host groups Linux servers, add interface => Agent 192.168.101.10, Add;
-Host name ADMIN-PC, Templates Linux by Zabbix agent, Host groups Linux servers, add interface => Agent 192.168.101.%ip% (DHCP, use ip -br a), Add;
-srv now: docker run -p 8080:80 -e TZ='Asia/Moscow' -d dlandon/zoneminder, docker ps, (if problems)docker compose down, docker compose up -d, docker ps(/if), wget https://download.cyberprotect.ru/releases/CyberBackup/18.5.40801/CyberBackup_18_64-bit.x86_64 (also can be mount /dev/cdrom /mnt/, cp /mnt/"it" ./ ), chmod +x ./CyberBackup_18_64-bit.x86_64, dkms status, remember %version% like a 2.1.12, dkms install -m snapapi26 -v %version%, run cyberbackup, (3) bootable media * to _ (last) storage node _ to * => next => next => next => next => exit, useradd audit, passwd audit (P@ssw0rd)
-admin-pc now: wget https://download.cyberprotect.ru/releases/CyberBackup/18.5.40801/CyberBackup_18_64-bit.x86_64, chmod +x ./CyberBackup_18_64-bit.x86_64, run cyberbackup, (1) management (3) bootable media * to _ => server manager: 192.168.101.10, account is root/toor, next => ok
-admin-pc open 192.168.101.10:9877, root/toor, try license, add account audit, save and add, storage of reserve copies, bottom add storage, storage node, name: BACKUPS, way to storage: create /var/backups, add, plans, protecting, new protecting plan name: SYSTEM-BACKUP, choose data: files/folders, elements for reserve copying: /etc ok, place to save: BACKUPS, change schedule: scheme always full, daily, launch on 00:00, done, clearing: in depends at number of reserve copies, largest number: 3, done, press in top "to create", press "arrow" to launch, (may occase an little trouble, speacher says that it because of non-linear downloading and setting)
-(if everything in zoneminder is bad: git clone https://github.com/devmaster24/zoneminder-docker , cd zoneminder-docker/ , vim docker-compose.yml => TZ: Asia/Moscow, docker compose up -d, some image docker stop, docker rm, asia/moscow doesn't exists, but we can make it in the fake way, docker exec -it zoneminder (it is container's name) /bin/bash, mkdir -p /srv/video)
-also parallelly at admin-pc we open 192.168.101.10:8080/zm/ , language=ru, tz check, storage => add new storage, name storage, path (our) /srv/video, save, log => add monitors: name cam1.au.team, source way rtsp://admin:123456@192.168.120.25:554 (/streaming/channels/101), resolution select standard 1920x1080, save, name cam2.au.team, source way rtsp://admin:123456@192.168.120.26:554 (/streaming/channels/101), resolution select standard 1920x1080, save, filters: name deletingold, date of finishing is bigger than -1 week, sorting date/time of finishing in order of rising, mark to delete chosen, mark to do in background, save
+Host name ADMIN-PC, Templates Linux by Zabbix agent, Host groups Linux servers, add interface => Agent DNS name admin.au.team, Add;
+
+srv now: docker run -p 80:80 -e TZ='Asia/Moscow' -d dlandon/zoneminder, docker ps, (if problems)docker compose down, docker compose up -d, docker ps(/if)
+fix fake tz inside zm container: docker exec -it zoneminder /bin/bash, ln -sf /usr/share/zoneinfo/Europe/Moscow /usr/share/zoneinfo/Asia/Moscow, mkdir -p /srv/video, exit
+wget https://download.cyberprotect.ru/releases/CyberBackup/18.5.40801/CyberBackup_18_64-bit.x86_64 (also can be mount /dev/cdrom /mnt/, cp /mnt/"it" ./ ), chmod +x ./CyberBackup_18_64-bit.x86_64, dkms status, remember %version% like a 2.1.12, dkms install -m snapapi26 -v %version%, run cyberbackup, (3) bootable media * to _ (last) storage node _ to * => next => next => next => next => exit, useradd audit, passwd audit (P@ssw0rd)
+
+admin-pc now: wget https://download.cyberprotect.ru/releases/CyberBackup/18.5.40801/CyberBackup_18_64-bit.x86_64, chmod +x ./CyberBackup_18_64-bit.x86_64, run cyberbackup, (1) management (3) bootable media * to _ (agent for linux stays *) => server manager: 192.168.101.10, account is root/toor, next => ok
+admin-pc open 192.168.101.10:9877, root/toor, try license, add account audit, assign role Auditor, save and add, storage of reserve copies, bottom add storage, storage node, name: BACKUPS, way to storage: create /var/backup, add, plans, protecting, new protecting plan name: SYSTEM-BACKUP, choose data: files/folders, elements for reserve copying: /etc ok, place to save: BACKUPS, change schedule: scheme always full, daily, launch on 00:00, done, clearing: in depends at number of reserve copies, largest number: 3, done, press in top "to create", press "arrow" to launch, (may occase an little trouble, speacher says that it because of non-linear downloading and setting)
+
+(if everything in zoneminder is bad: git clone https://github.com/devmaster24/zoneminder-docker , cd zoneminder-docker/ , vim docker-compose.yml => TZ: Asia/Moscow, docker compose up -d, some image docker stop, docker rm, docker exec -it zoneminder /bin/bash, ln -sf /usr/share/zoneinfo/Europe/Moscow /usr/share/zoneinfo/Asia/Moscow, mkdir -p /srv/video, exit)
+
+also parallelly at admin-pc we open 192.168.101.10/zm/ , language=ru, tz check => if UI shows UTC, remember we faked Asia/Moscow inside container so system time is correct, storage => add new storage, name storage, path (our) /srv/video, save, log => add monitors: name cam1.au.team, source way rtsp://admin:123456@192.168.120.25:554 (/streaming/channels/101), resolution select standard 1920x1080, save, add zone (active area), save, name cam2.au.team, source way rtsp://admin:123456@192.168.120.26:554 (/streaming/channels/101), resolution select standard 1920x1080, save, add zone (active area), save, filters: name deletingold, date of finishing is bigger than -7 days, sorting date/time of finishing in order of rising, mark to delete chosen, mark to do in background, save
+
 it is all, that need was, maybe. Check every state in our techical
